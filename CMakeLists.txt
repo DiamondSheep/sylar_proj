@@ -8,11 +8,12 @@ set(CMAKE_CXX_FLAGS -g)
  
 aux_source_directory(src/ SOURCE_DIR) 
  
-list(APPEND EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/include) 
+
+#list(APPEND EXTRA_INCLUDES ${PROJECT_SOURCE_DIR}/include) 
  
 #list(APPEND EXTRA_LIBS ${PROJECT_SOURCE_DIR}/lib) 
  
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_DIR}) 
  
-target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR} ${EXTRA_INCLUDES}) 
+target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${PROJECT_BINARY_DIR}) 
 #target_link_directories(${CMAKE_PROJECT_NAME} PUBLIC ${EXTRA_LIBS})
