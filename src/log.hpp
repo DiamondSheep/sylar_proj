@@ -4,6 +4,11 @@
 #include <string>
 #include <memory>
 #include <list>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <utility>
 
 namespace sylar{
 
@@ -19,12 +24,21 @@ public:
         FATAL = 5,
         OFF   = 6
     };
+
+    static const char* ToString(Level level);
 };
 
 class LogEvent{
 public:
     typedef std::shared_ptr<LogEvent> ptr;
-    LogEvent ();
+    LogEvent () {}
+
+    const char* getFile() const { return m_filename; }
+    int32_t getLine() const { return m_line; }
+    uint32_t getThreadID() const { return m_threadID; }
+    uint32_t getFiberID() const { return m_fiberID; }
+    uint32_t getTime() const { return m_time; }
+    const std::string& getContent() const { return m_content; } 
 private:
     const char* m_filename = nullptr;
     int32_t m_line = 0;
@@ -37,17 +51,35 @@ private:
 class LogFormatter {
 public:
     typedef std::shared_ptr<LogFormatter> ptr;
-    std::string format(LogEvent::ptr event);
+    LogFormatter(const std::string& pattern);
+    void parse();
+    //%t    %threadID %m%n
+    std::string format(LogLevel::Level level, LogEvent::ptr event);
+
+    class FormatItem{
+    public:
+         typedef std::shared_ptr<FormatItem> ptr;
+        virtual ~FormatItem() {}
+        virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) = 0;
+    };
+
 private:
+    std::string m_pattern;
+    std::vector<FormatItem::ptr> m_items;
 };
 
 class LogAppender {
 public:
     typedef std::shared_ptr<LogAppender> ptr;
     virtual ~LogAppender() {} // free space of derived class
-    void log (LogLevel::Level level, LogEvent::ptr event);
-private:
+    virtual void log (LogLevel::Level level, LogEvent::ptr event) = 0;
+    
+    void setFormatter (LogFormatter::ptr formatter) { m_formatter = formatter; }
+    LogFormatter::ptr getFormatter () const { return m_formatter; }
+
+protected:
     LogLevel::Level m_level;
+    LogFormatter::ptr m_formatter;
 };
 
 class Logger {
@@ -56,7 +88,7 @@ public:
     
     void addAppender (LogAppender::ptr appender);
     void delAppender (LogAppender::ptr appender);
-    
+
     LogLevel::Level getLevel () const { return m_level; }
     void setLevel (LogLevel::Level level) { m_level = level; }
 
@@ -75,8 +107,22 @@ private:
  * ---------------------------------------------
 */
 // For consoler
-class StdoutLogAppender : public LogAppender {};
+class StdoutLogAppender : public LogAppender {
+public:
+    typedef std::shared_ptr<StdoutLogAppender> ptr;
+    virtual void log (LogLevel::Level, LogEvent::ptr event) override;
+private:
+};
 
-}
+class FileLogAppender : public LogAppender {
+public:
+    FileLogAppender (const std::string& filename);
+    virtual void log (LogLevel::Level, LogEvent::ptr event) override;
+    bool reopen (); // reopen the file, return True if success
+private:
+    std::string m_filename;
+    std::fstream m_filestream;
+};
 
+} // end of namespace
 #endif
