@@ -4,8 +4,10 @@
  
 using namespace sylar;
 
-int main(){ 
+int main(int argc, char* argv[]){ 
 	std::cout << "-- Project: sylar" << std::endl; 
+
+	std::string givenFormat = argv[1];
 
 	std::string logName = "demo";
 	Logger logger(logName);
@@ -15,7 +17,7 @@ int main(){
 	logger.addAppender(std::make_shared<StdoutLogAppender>(appender));
 	logger.log(LogLevel::ALL, std::make_shared<LogEvent>(event));
 
-	LogFormatter formatter("text1 %m %i{ABC}text2%sylar{xxx}text3");
+	LogFormatter formatter(givenFormat);
 	formatter.parse();
 	
 	return 0; 

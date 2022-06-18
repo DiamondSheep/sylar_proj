@@ -9,8 +9,12 @@
 #include <sstream>
 #include <vector>
 #include <utility>
+#include <map>
+#include <functional>
 
 namespace sylar{
+
+class Logger;
 
 class LogLevel{
 public:
@@ -25,7 +29,7 @@ public:
         OFF   = 6
     };
 
-    static const char* ToString(Level level);
+    static const char* ToString(const Level level);
 };
 
 class LogEvent{
@@ -33,10 +37,11 @@ public:
     typedef std::shared_ptr<LogEvent> ptr;
     LogEvent () {}
 
-    const char* getFile() const { return m_filename; }
-    int32_t getLine() const { return m_line; }
+    const char* getFileName() const { return m_filename; }
+    int32_t getLineNumber() const { return m_line; }
     uint32_t getThreadID() const { return m_threadID; }
     uint32_t getFiberID() const { return m_fiberID; }
+    uint32_t getElapse() const {return m_elapse; }
     uint32_t getTime() const { return m_time; }
     const std::string& getContent() const { return m_content; } 
 private:
@@ -44,6 +49,7 @@ private:
     int32_t m_line = 0;
     uint32_t m_threadID = 0;
     uint32_t m_fiberID = 0;
+    uint32_t m_elapse = 0;
     uint32_t m_time;
     std::string m_content;
 };
@@ -58,7 +64,8 @@ public:
 
     class FormatItem{
     public:
-         typedef std::shared_ptr<FormatItem> ptr;
+        typedef std::shared_ptr<FormatItem> ptr;
+        FormatItem (const std::string& fmt = "") {}
         virtual ~FormatItem() {}
         virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) = 0;
     };
@@ -97,7 +104,7 @@ public:
     // TODO
 private:
     std::string m_logname;
-    LogLevel::Level m_level;
+    LogLevel::Level m_level; 
     std::list<LogAppender::ptr> m_appenders;
 };
 
