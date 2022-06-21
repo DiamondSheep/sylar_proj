@@ -11,6 +11,8 @@
 #include <utility>
 #include <map>
 #include <functional>
+#include <time.h>
+#include <cstring>
 
 namespace sylar{
 

@@ -94,9 +94,18 @@ class DateTimeFormatItem : public LogFormatter::FormatItem{
 public:
     DateTimeFormatItem (const std::string& format = "")
     : m_format(format) {
+        if (m_format.empty()){
+            m_format = "%Y-%m-%d %H:%M:%S";
+        }
     }
     virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) override{
-        os << event->getTime();
+        // TODO
+        struct tm tm;
+        time_t time = event->getTime();
+        localtime_r(&time, &tm);
+        char buf[64];
+        strftime(buf, sizeof(buf), m_format.c_str(), &tm);
+        os << buf;
     }
 private:
     std::string m_format;
@@ -217,7 +226,7 @@ void LogFormatter::parse() {
                 vec.push_back(std::make_tuple(str, fmt_str, 1));
             }
         }
-        i = n ; // flash the index
+        i = n - 1; // flash the index
     }
 
     if (!text.empty()){
