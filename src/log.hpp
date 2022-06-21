@@ -35,15 +35,17 @@ public:
 class LogEvent{
 public:
     typedef std::shared_ptr<LogEvent> ptr;
-    LogEvent () {}
-
+    LogEvent (const char* file, int32_t line, 
+              uint32_t threadID, uint32_t fiberID, 
+              uint32_t elapse, uint32_t time);
     const char* getFileName() const { return m_filename; }
     int32_t getLineNumber() const { return m_line; }
     uint32_t getThreadID() const { return m_threadID; }
     uint32_t getFiberID() const { return m_fiberID; }
     uint32_t getElapse() const {return m_elapse; }
     uint32_t getTime() const { return m_time; }
-    const std::string& getContent() const { return m_content; } 
+    const std::string getContent() const { return m_ss.str(); } 
+    std::stringstream& getSS() { return m_ss; }
 private:
     const char* m_filename = nullptr;
     int32_t m_line = 0;
@@ -52,12 +54,13 @@ private:
     uint32_t m_elapse = 0;
     uint32_t m_time;
     std::string m_content;
+    std::stringstream m_ss;
 };
 
 class LogFormatter {
 public:
     typedef std::shared_ptr<LogFormatter> ptr;
-    LogFormatter(const std::string& pattern);
+    LogFormatter(const std::string& pattern = " %l %n %n"); //%d [%p{fmt}] %f{fmt} %l %m %n
     void parse();
     //%t    %threadID %m%n
     std::string format(LogLevel::Level level, LogEvent::ptr event);
@@ -78,6 +81,8 @@ private:
 class LogAppender {
 public:
     typedef std::shared_ptr<LogAppender> ptr;
+    LogAppender (LogLevel::Level level=LogLevel::ALL) {
+    }
     virtual ~LogAppender() {} // free space of derived class
     virtual void log (LogLevel::Level level, LogEvent::ptr event) = 0;
     
@@ -106,6 +111,7 @@ private:
     std::string m_logname;
     LogLevel::Level m_level; 
     std::list<LogAppender::ptr> m_appenders;
+    LogFormatter::ptr m_formatter;
 };
 
 /*

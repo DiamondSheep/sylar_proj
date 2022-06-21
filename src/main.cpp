@@ -6,19 +6,21 @@ using namespace sylar;
 
 int main(int argc, char* argv[]){ 
 	std::cout << "-- Project: sylar" << std::endl; 
+	Logger logger("demo");
+	std::string pattern;
+	if (argc > 1)
+		pattern = argv[1];
+	else
+		pattern = "[ %l ] %m %n";
+	LogFormatter::ptr formatter (new LogFormatter(pattern));
+	LogAppender::ptr stdapp (new StdoutLogAppender);
+	stdapp->setFormatter(formatter);
+	logger.addAppender(stdapp);
+	LogEvent::ptr event( new LogEvent(__FILE__, __LINE__, 0, 1, 2, time(0)) );
 
-	std::string givenFormat = argv[1];
-
-	std::string logName = "demo";
-	Logger logger(logName);
-	LogEvent event;
-	StdoutLogAppender appender;
+	event->getSS() << "Hello";
 	
-	logger.addAppender(std::make_shared<StdoutLogAppender>(appender));
-	logger.log(LogLevel::ALL, std::make_shared<LogEvent>(event));
-
-	LogFormatter formatter(givenFormat);
-	formatter.parse();
+	logger.log(LogLevel::ALL, event);
 	
 	return 0; 
 }
