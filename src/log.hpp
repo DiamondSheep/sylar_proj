@@ -46,7 +46,7 @@ public:
     uint32_t getFiberID() const { return m_fiberID; }
     uint32_t getElapse() const {return m_elapse; }
     uint32_t getTime() const { return m_time; }
-    const std::string getContent() const { return m_ss.str(); } 
+    std::string getContent() const { return m_ss.str(); } 
     std::stringstream& getSS() { return m_ss; }
 private:
     const char* m_filename = nullptr;
@@ -55,7 +55,6 @@ private:
     uint32_t m_fiberID = 0;
     uint32_t m_elapse = 0;
     uint32_t m_time;
-    std::string m_content;
     std::stringstream m_ss;
 };
 
@@ -64,7 +63,6 @@ public:
     typedef std::shared_ptr<LogFormatter> ptr;
     LogFormatter(const std::string& pattern = ""); //%d [%p{fmt}] %f{fmt} %l %m %n
     void parse();
-    //%t    %threadID %m%n
     std::string format(LogLevel::Level level, LogEvent::ptr event);
 
     class FormatItem{

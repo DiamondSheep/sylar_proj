@@ -1,7 +1,8 @@
 
 #include "log.hpp" 
 #include <iostream>
- 
+#include "utils.hpp"
+
 using namespace sylar;
 
 int main(int argc, char* argv[]){ 
@@ -11,13 +12,12 @@ int main(int argc, char* argv[]){
 	if (argc > 1)
 		pattern = argv[1];
 	else
-		pattern = "%d{%Y-%m-%d %H:%M:%S}%T[%p] <%f:%l>%T%m %n";
+		pattern = "%d{%Y-%m-%d %H:%M:%S}%T[%p] <%f:%l>%T%t%T%m %n";
 	LogFormatter::ptr formatter (new LogFormatter(pattern));
 	LogAppender::ptr stdapp (new StdoutLogAppender);
 	stdapp->setFormatter(formatter);
 	logger.addAppender(stdapp);
-	LogEvent::ptr event( new LogEvent(__FILE__, __LINE__, 0, 1, 2, time(0)) );
-
+	LogEvent::ptr event( new LogEvent(__FILE__, __LINE__, 0, GetThreadID(), 2, time(0)) );
 	event->getSS() << "Hello";
 	
 	logger.log(LogLevel::ALL, event);
