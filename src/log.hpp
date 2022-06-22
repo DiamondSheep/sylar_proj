@@ -13,6 +13,14 @@
 #include <functional>
 #include <time.h>
 #include <cstring>
+#include "utils.hpp"
+
+#define SYLAR_LOG_LEVEL(logger, level)\
+    if (logger->getLevel() <= level)\
+        std::cout << sylar::LogEventWarp (sylar::LogEvent::ptr(new LogEvent (logger, level, __FILE__, __LINE__, 0, sylar::GetThreadID(), sylar::GetFiberID(), time(0)))).getSS().str()
+
+#define SYLAR_LOG_DEBUG(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::DEBUG)
+// TODO
 
 namespace sylar{
 
@@ -37,9 +45,12 @@ public:
 class LogEvent{
 public:
     typedef std::shared_ptr<LogEvent> ptr;
-    LogEvent (const char* file, int32_t line, 
+    LogEvent (std::shared_ptr<Logger> logger, LogLevel::Level level,
+              const char* file, int32_t line, 
               uint32_t threadID, uint32_t fiberID, 
               uint32_t elapse, uint32_t time);
+    std::shared_ptr<Logger> getLogger() const { return m_logger; }
+    LogLevel::Level getLevel() const { return m_level; }
     const char* getFileName() const { return m_filename; }
     int32_t getLineNumber() const { return m_line; }
     uint32_t getThreadID() const { return m_threadID; }
@@ -49,6 +60,8 @@ public:
     std::string getContent() const { return m_ss.str(); } 
     std::stringstream& getSS() { return m_ss; }
 private:
+    std::shared_ptr<Logger> m_logger;
+    LogLevel::Level m_level;
     const char* m_filename = nullptr;
     int32_t m_line = 0;
     uint32_t m_threadID = 0;
@@ -56,6 +69,15 @@ private:
     uint32_t m_elapse = 0;
     uint32_t m_time;
     std::stringstream m_ss;
+};
+
+class LogEventWarp {
+public:
+    LogEventWarp(LogEvent::ptr e);
+    ~LogEventWarp();
+    std::stringstream& getSS();
+private:
+    LogEvent::ptr m_event;
 };
 
 class LogFormatter {

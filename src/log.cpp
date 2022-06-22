@@ -30,13 +30,17 @@ const char* LogLevel::ToString(const LogLevel::Level level) {
 /* 
  * --------------- LogEvent ---------------
  */
-LogEvent::LogEvent (const char* filename, 
+LogEvent::LogEvent (std::shared_ptr<Logger> logger,
+                    LogLevel::Level level, 
+                    const char* filename, 
                     int32_t line, 
                     uint32_t threadID, 
                     uint32_t fiberID, 
                     uint32_t elapse, 
                     uint32_t time)
-                    :m_filename(filename), 
+                    :m_logger(logger),
+                     m_level(level),
+                     m_filename(filename), 
                      m_line(line), 
                      m_threadID(threadID), 
                      m_fiberID(fiberID), 
@@ -44,6 +48,20 @@ LogEvent::LogEvent (const char* filename,
                      m_time(time) {
                 
                }
+
+/* 
+ * --------------- LogEventWarp ---------------
+ */
+LogEventWarp::LogEventWarp(LogEvent::ptr e)
+: m_event(e){}
+
+LogEventWarp::~LogEventWarp(){
+    m_event->getLogger()->log(m_event->getLevel(), m_event);
+}
+
+std::stringstream& LogEventWarp::getSS() {
+    return m_event->getSS();
+}
 
 /* 
  * --------------- FormatItem ---------------
