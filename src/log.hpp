@@ -62,7 +62,7 @@ private:
 class LogFormatter {
 public:
     typedef std::shared_ptr<LogFormatter> ptr;
-    LogFormatter(const std::string& pattern = " %l %n %n"); //%d [%p{fmt}] %f{fmt} %l %m %n
+    LogFormatter(const std::string& pattern = ""); //%d [%p{fmt}] %f{fmt} %l %m %n
     void parse();
     //%t    %threadID %m%n
     std::string format(LogLevel::Level level, LogEvent::ptr event);

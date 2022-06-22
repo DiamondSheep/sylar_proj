@@ -92,14 +92,13 @@ public:
 
 class DateTimeFormatItem : public LogFormatter::FormatItem{
 public:
-    DateTimeFormatItem (const std::string& format = "")
+    DateTimeFormatItem (const std::string& format)
     : m_format(format) {
         if (m_format.empty()){
             m_format = "%Y-%m-%d %H:%M:%S";
         }
     }
     virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) override{
-        // TODO
         struct tm tm;
         time_t time = event->getTime();
         localtime_r(&time, &tm);
@@ -146,6 +145,14 @@ private:
     std::string m_string;
 };
 
+class TabFormatItem : public LogFormatter::FormatItem{
+public:
+    TabFormatItem (const std::string& str = "") {}
+    virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) override{
+        os << "\t";
+    }
+private:
+};
 
 /*
  * --------------- LogFormatter ---------------
@@ -182,8 +189,9 @@ void LogFormatter::parse() {
         std::string fmt_str;
         std::string str;
 
-        for (size_t fmt_begin = 0; n < m_pattern.size() && m_pattern[n] != '%'; ++n){
-            if (isspace(m_pattern[n])) {
+        for (size_t fmt_begin = 0; n < m_pattern.size(); ++n){
+            if (!fmt_status && (!isalpha(m_pattern[n]) && m_pattern[n] != '{' && m_pattern[n] != '}')) {  // isspace(m_pattern[n])
+                str = m_pattern.substr(i + 1, n - i - 1);
                 break;
             }
             if (fmt_status == 0){
@@ -193,44 +201,39 @@ void LogFormatter::parse() {
                     fmt_begin = n;
                     continue;
                 }
+                if (n == m_pattern.size() - 1 && str.empty()) {
+                    str = m_pattern.substr(n, 1);
+                    continue;
+                }
             }
             if (fmt_status == 1) {
                 if (m_pattern[n] == '}') {
-                    fmt_status = 2;
+                    fmt_status = 0;
                     fmt_str = m_pattern.substr(fmt_begin + 1, n - fmt_begin - 1);
+                    ++n;
                     break;
                 }
             }
         }
-        
-        if (!text.empty()){
-            vec.push_back(std::make_tuple(text, "", 0));
-            text.clear();
-        }
 
         if (fmt_status == 0) {
             // No '{' in format pattern
-            str = m_pattern.substr(i + 1, n - i - 1);
-            if (!str.empty()){
-                vec.push_back(std::make_tuple(str, fmt_str, 1));
+            if (!text.empty()){
+                vec.push_back(std::make_tuple(text, std::string(), 0));
+                text.clear();
             }
+            vec.push_back(std::make_tuple(str, fmt_str, 1));
+            i = n - 1; // flash the index
         } 
         else if (fmt_status == 1) {
             // No paired brace in format pattern 
             std::cout << "Pattern parse error: " << m_pattern << " - " << m_pattern.substr(i) << std::endl;
             vec.push_back(std::make_tuple("<<pattern_error>>", fmt_str, 0));
         } 
-        else if (fmt_status == 2) {
-            // Paired brace in format pattern
-            if (!str.empty()){
-                vec.push_back(std::make_tuple(str, fmt_str, 1));
-            }
-        }
-        i = n - 1; // flash the index
+        //std::cout << "status: " << fmt_status << ", i: " << i << ", str length: " << str.size() << std::endl;
     }
-
     if (!text.empty()){
-        vec.push_back(std::make_tuple(text, "", 0));
+        vec.push_back(std::make_tuple(text, std::string(), 0));
         text.clear();
     }
 
@@ -243,6 +246,7 @@ void LogFormatter::parse() {
     * %d -- time
     * %f -- filename
     * %l -- linenumber
+    * %T -- tab
     */
     static std::map<std::string, std::function<FormatItem::ptr(const std::string)> > s_format_items = {
         {"m", [](const std::string& fmt){ return FormatItem::ptr(new MessageFormatItem(fmt)); }},
@@ -253,9 +257,8 @@ void LogFormatter::parse() {
         {"d", [](const std::string& fmt){ return FormatItem::ptr(new DateTimeFormatItem(fmt)); }},
         {"f", [](const std::string& fmt){ return FormatItem::ptr(new FileNameFormatItem(fmt)); }},
         {"l", [](const std::string& fmt){ return FormatItem::ptr(new LineNumberFormatItem(fmt)); }},
-        //{"s", [](const std::string& fmt){ return FormatItem::ptr(new StringFormatItem(fmt)); }}
+        {"T", [](const std::string& fmt){ return FormatItem::ptr(new TabFormatItem(fmt)); }}
     };
-
     
     for (auto& i : vec) {
         if (std::get<2>(i) == 0) {
@@ -274,7 +277,6 @@ void LogFormatter::parse() {
         }
         //std::cout << std::get<0>(i) << " - " << std::get<1>(i) << " - " << std::get<2>(i) << std::endl;
     }
-    
 }
 
 std::string LogFormatter::format (LogLevel::Level level, LogEvent::ptr event){

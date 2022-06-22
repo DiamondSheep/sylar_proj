@@ -11,7 +11,7 @@ int main(int argc, char* argv[]){
 	if (argc > 1)
 		pattern = argv[1];
 	else
-		pattern = "%d [ %p ] < %f : %l > %m %n";
+		pattern = "%d{%Y-%m-%d %H:%M:%S}%T[%p] <%f:%l>%T%m %n";
 	LogFormatter::ptr formatter (new LogFormatter(pattern));
 	LogAppender::ptr stdapp (new StdoutLogAppender);
 	stdapp->setFormatter(formatter);
