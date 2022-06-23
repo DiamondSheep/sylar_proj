@@ -1,26 +1,40 @@
 #ifndef __LOG_H__
 #define __LOG_H__
-#include <stdint.h>
+
+// C libraries
+#include <cstdint>
+#include <time.h>
+#include <stdarg.h>
+#include <cstring>
+
+// C++ libraries
 #include <string>
 #include <memory>
 #include <list>
+#include <map>
+#include <vector>
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <vector>
 #include <utility>
-#include <map>
 #include <functional>
-#include <time.h>
-#include <cstring>
+
 #include "utils.hpp"
+#include "singleton.hpp"
 
 #define SYLAR_LOG_LEVEL(logger, level)\
     if (logger->getLevel() <= level)\
-        std::cout << sylar::LogEventWarp (sylar::LogEvent::ptr(new LogEvent (logger, level, __FILE__, __LINE__, 0, sylar::GetThreadID(), sylar::GetFiberID(), time(0)))).getSS().str()
+        sylar::LogEventWrap (sylar::LogEvent::ptr(new LogEvent (logger, level, __FILE__, __LINE__, 0, sylar::GetThreadID(), sylar::GetFiberID(), time(0)))).getSS()
 
 #define SYLAR_LOG_DEBUG(logger) SYLAR_LOG_LEVEL(logger, sylar::LogLevel::DEBUG)
 // TODO
+
+#define SYLAR_LOG_FMT_LEVEL(logger, level, fmt, ...)\
+    if (logger->getLevel() <= level)\
+        sylar::LogEventWrap(sylar::LogEvent::ptr(new sylar::LogEvent(logger, level, __FILE__, __LINE__, 0, sylar::GetThreadID(), sylar::GetFiberID(), time(0)))).getEvent()->format(fmt, __VA_ARGS__)
+#define SYLAR_LOG_FMT_DEBUG(logger, fmt, ...) SYLAR_LOG_FMT_LEVEL(logger, LogLevel::DEBUG, fmt, __VA_ARGS__)
+// TODO
+
 
 namespace sylar{
 
@@ -38,7 +52,6 @@ public:
         FATAL = 5,
         OFF   = 6
     };
-
     static const char* ToString(const Level level);
 };
 
@@ -59,6 +72,9 @@ public:
     uint32_t getTime() const { return m_time; }
     std::string getContent() const { return m_ss.str(); } 
     std::stringstream& getSS() { return m_ss; }
+
+    void format(const char* fmt, ...);
+    void format(const char* fmt, va_list al);
 private:
     std::shared_ptr<Logger> m_logger;
     LogLevel::Level m_level;
@@ -71,11 +87,12 @@ private:
     std::stringstream m_ss;
 };
 
-class LogEventWarp {
+class LogEventWrap {
 public:
-    LogEventWarp(LogEvent::ptr e);
-    ~LogEventWarp();
+    LogEventWrap(LogEvent::ptr e);
+    ~LogEventWrap();
     std::stringstream& getSS();
+    LogEvent::ptr getEvent();
 private:
     LogEvent::ptr m_event;
 };
@@ -110,6 +127,8 @@ public:
     
     void setFormatter (LogFormatter::ptr formatter) { m_formatter = formatter; }
     LogFormatter::ptr getFormatter () const { return m_formatter; }
+    LogLevel::Level getLevel() const { return m_level; }
+    void setLevel(LogLevel::Level level) { m_level = level; }
 
 protected:
     LogLevel::Level m_level;
@@ -136,6 +155,18 @@ private:
     LogFormatter::ptr m_formatter;
 };
 
+class LoggerManager {
+public:
+    LoggerManager ();
+    std::shared_ptr<Logger> getLogger(const std::string& name);
+    
+    void init();
+
+private:
+    std::map<std::string, std::shared_ptr<Logger>> m_loggers;
+    std::shared_ptr<Logger> m_root;
+};
+
 /*
  * ---------------------------------------------
  *               Derived classes
@@ -158,6 +189,8 @@ private:
     std::string m_filename;
     std::fstream m_filestream;
 };
+
+typedef Singleton<LoggerManager> SltLoggerMgr;
 
 } // end of namespace
 #endif

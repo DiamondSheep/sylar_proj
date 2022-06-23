@@ -46,21 +46,38 @@ LogEvent::LogEvent (std::shared_ptr<Logger> logger,
                      m_fiberID(fiberID), 
                      m_elapse(elapse), 
                      m_time(time) {
-                
                }
+void LogEvent::format(const char* fmt, ...){
+    va_list al;
+    va_start(al, fmt); // allow to visit 
+    format(fmt, al);
+    va_end(al);
+}
+void LogEvent::format(const char* fmt, va_list al){
+    char* buf = nullptr;
+    int len = vasprintf(&buf, fmt, al);
+    if (len != -1){
+        m_ss << std::string (buf, len);
+        free (buf);
+    }
+}
 
 /* 
- * --------------- LogEventWarp ---------------
+ * --------------- LogEventWrap ---------------
  */
-LogEventWarp::LogEventWarp(LogEvent::ptr e)
+LogEventWrap::LogEventWrap(LogEvent::ptr e)
 : m_event(e){}
 
-LogEventWarp::~LogEventWarp(){
+LogEventWrap::~LogEventWrap(){
     m_event->getLogger()->log(m_event->getLevel(), m_event);
 }
 
-std::stringstream& LogEventWarp::getSS() {
+std::stringstream& LogEventWrap::getSS() {
     return m_event->getSS();
+}
+
+LogEvent::ptr LogEventWrap::getEvent(){
+    return m_event;
 }
 
 /* 
@@ -321,7 +338,7 @@ FileLogAppender::FileLogAppender (const std::string& filename)
     if (!m_filestream.is_open()){
 
         // TODO: exception dealing
-        
+        std::cout << "File opening failed. " << std::endl;
         exit(1);
     }
 }
@@ -369,6 +386,25 @@ void Logger::log(LogLevel::Level level, LogEvent::ptr event){
             i->log(level, event);
         }
     }
+}
+
+/*
+ * --------------- LoggerManager ---------------
+*/
+LoggerManager::LoggerManager (){
+    m_root.reset(new Logger);
+    m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+}
+std::shared_ptr<Logger> LoggerManager::getLogger(const std::string& name) {
+    auto it = m_loggers.find(name);
+    if (it != m_loggers.end()) {
+        return it->second;
+    }
+    return m_root;
+}
+
+void LoggerManager::init() {
+
 }
 
 
