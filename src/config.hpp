@@ -54,6 +54,8 @@ public:
         }
         return false;
     }
+    const T getValue () const {return m_val; }
+    void setValue (const T& val) { m_val = val; }
 private:
     T m_val;
 };
@@ -71,13 +73,14 @@ public:
             // found
             SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "Lookup name=" << name << " exists";
         }
-        if (name.find_first_not_of ("abcdefghijklmnopqrstuvwxyzABCDEFGHIMNOPQRSTUVWXYZ")!=std::string::npos) {
-            SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "Lookup name invalid" << name;
+        if (name.find_first_not_of ("abcdefghijklmnopqrstuvwxyzABCDEFGHIMNOPQRSTUVWXYZ._0123456789")!=std::string::npos) {
+            SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "Lookup name invalid " << name;
             throw std::invalid_argument(name);
         }
         // Create new ConfigVar
         typename ConfigVar<T>::ptr v(new ConfigVar<T> (name, default_value, description));
         s_data[name] = v;
+        return v;
     }
     template <class T>
     static typename ConfigVar<T>::ptr Lookup (const std::string& name) {

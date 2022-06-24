@@ -19,8 +19,8 @@ target_include_directories(sylar PUBLIC ${Boost_INCLUDE_DIRS})
 target_link_libraries(sylar PUBLIC ${Boost_LIBRARIES})
 
 set(TEST_SRC
-    test/logger_test.cpp # for logger 
-    #test/config_test.cpp # for config
+    #test/logger_test.cpp # for logger 
+    test/config_test.cpp # for config
     )
 
 add_executable(test ${TEST_SRC}) 
