@@ -1,0 +1,3 @@
+2022-06-24 23:17:33	[ALL]	</home/gaoyc/code/cpp/sylar/test/logger_test.cpp:26>	0	test stringstream 
+2022-06-24 23:17:33	[ALL]	</home/gaoyc/code/cpp/sylar/test/logger_test.cpp:30>	0	test level 
+2022-06-24 23:17:33	[ALL]	</home/gaoyc/code/cpp/sylar/test/logger_test.cpp:31>	0	test fmt 

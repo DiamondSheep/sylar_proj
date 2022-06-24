@@ -195,6 +195,12 @@ private:
 
 LogFormatter::LogFormatter(const std::string& pattern)
 : m_pattern(pattern){
+    if (pattern.empty()){
+        // If no given pattern, 
+        // it will be initialized with following pattern 
+        m_pattern = "%d{%Y-%m-%d %H:%M:%S}%T[%p]%T<%f:%l>%T%t%T%m %n";
+    }
+    // Parsing the pattern
     parse();
 }
 
@@ -314,8 +320,9 @@ void LogFormatter::parse() {
     }
 }
 
-std::string LogFormatter::format (LogLevel::Level level, LogEvent::ptr event){
+std::string LogFormatter::format (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event){
     std::stringstream ss; 
+    LogLevel::Level level = logger_ptr->getLevel();
     for (auto& i: m_items){
         i->format(ss, level, event);
     }
@@ -324,30 +331,31 @@ std::string LogFormatter::format (LogLevel::Level level, LogEvent::ptr event){
 
 /*
  * --------------- LogAppender ---------------
-*/
-void StdoutLogAppender::log (LogLevel::Level level, LogEvent::ptr event){
-    if (level >= m_level) {
-        // print to consoler
-        std::cout << m_formatter->format(level, event);
-    }
+ *  Only if the given level higher than the internal level
+ *  E.g.: appender(LogLevel::WARN) 
+ *        appender.log(LogLevel::DEBUG, event); -> information 
+ *        appender.log(LogLevel::ERROR, event); -> Nothing
+ *  However, only Logger can control the level, so we set the appender level to the lowest. 
+ */
+void StdoutLogAppender::log (std::shared_ptr<Logger> logger_ptr,LogEvent::ptr event){
+    // print to consoler
+    std::cout << m_formatter->format(logger_ptr, event);
 }
 
 FileLogAppender::FileLogAppender (const std::string& filename)
 : m_filename(filename) {
     m_filestream.open(m_filename);
     if (!m_filestream.is_open()){
-
         // TODO: exception dealing
         std::cout << "File opening failed. " << std::endl;
         exit(1);
     }
 }
-void FileLogAppender::log (LogLevel::Level level, LogEvent::ptr event) {
-    if (level >= m_level) {
-        // print to file
-        m_filestream << m_formatter->format(level, event);
-    }
+
+void FileLogAppender::log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) {
+    m_filestream << m_formatter->format(logger_ptr, event);
 }
+
 bool FileLogAppender::reopen (){
     if (m_filestream){
         m_filestream.close();
@@ -381,9 +389,10 @@ void Logger::delAppender (LogAppender::ptr appender){
         }
 }
 void Logger::log(LogLevel::Level level, LogEvent::ptr event){
+    auto p = shared_from_this();
     if (level >= m_level){
         for (auto& i : m_appenders){
-            i->log(level, event);
+            i->log(p, event);
         }
     }
 }
@@ -395,6 +404,14 @@ LoggerManager::LoggerManager (){
     m_root.reset(new Logger);
     m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
 }
+
+void LoggerManager::addLogger (const std::string& name, std::shared_ptr<Logger> logger){
+    if (getLogger(name) != m_root) {
+        std::cout << "Logger exists. " << std::endl;
+    }
+    m_loggers[name] = logger;
+}
+
 std::shared_ptr<Logger> LoggerManager::getLogger(const std::string& name) {
     auto it = m_loggers.find(name);
     if (it != m_loggers.end()) {
