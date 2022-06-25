@@ -25,7 +25,10 @@ void print_yaml (const YAML::Node& node, int level) {
             SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << std::string(level * 4, ' ') << *it << " - " << (*it).Tag() << " - " << level;
             print_yaml((*it), level + 1);
         }
-        
+    }
+    else {
+        std::cout << "Unsupported type" << std::endl;
+        exit(1);
     }
 }
 
