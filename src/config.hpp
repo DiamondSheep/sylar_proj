@@ -33,8 +33,60 @@ protected:
     std::string m_description;
 };
 
+// From type F to type T
+template<class F, class T>
+class LexicalCast {
+public:
+    T operator () (const F& v) {
+        return boost::lexical_cast<T>(v);
+    }
+};
+
+// Partial Template Specialization
+
+// string to vector
+template<class T>
+class LexicalCast<std::string, std::vector<T> > {
+public:
+    std::vector<T> operator() (const std::string& string) {
+        YAML::Node node = YAML::Load(string);
+        typename std::vector<T> vec;
+        std::stringstream ss;
+        for (size_t i = 0; i < node.size(); ++i) {
+            ss.str(""); // flesh stringstream 
+            ss << node[i];
+            vec.push_back(LexicalCast<std::string, T>() (ss.str()));
+        }
+        return vec;
+    }
+};
+
+// vector to string
+template<class F>
+class LexicalCast<std::vector<F>, std::string> {
+public:
+    std::string operator() (const std::vector<F>& vec) {
+        YAML::Node node;
+        for (auto& i : vec) {
+            node.push_back(YAML::Load(LexicalCast<F, std::string>() (i)));
+        }
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
+    }
+};
+
+/* 
+ * Components: name, value, description
+ * class FromStr  
+    T operator() (const std::string&)
+ * class ToStr
+    std::string operator() (const T&)
+ */
 // Derivated classes
-template <class T>
+template <class T, 
+          class FromStr=LexicalCast<std::string, T>, 
+          class ToStr=LexicalCast<T, std::string> >
 class ConfigVar : public ConfigVarBase{
 public:
     typedef std::shared_ptr<ConfigVar> ptr;
@@ -47,7 +99,8 @@ public:
       }
     std::string toString() override {
         try {
-            return boost::lexical_cast<std::string> (m_val);
+            //return boost::lexical_cast<std::string> (m_val); // Directly convert to string
+            return ToStr() (m_val);
         } catch (std::exception& e) {
             SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "ConfigVar::toString exception" << e.what() << " convert " << typeid(m_val).name() << " to string.";
         }
@@ -55,14 +108,15 @@ public:
     }
     bool fromString (const std::string& val) override {
         try {
-            m_val = boost::lexical_cast<T> (val);
+            //m_val = boost::lexical_cast<T> (val); // Directly convert from string
+            setValue(FromStr() (val));
             return true;
         } catch (std::exception& e) {
             SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "ConfigVar::fromString exception" << e.what() << " convert string to " << typeid(m_val).name() << ".";
         }
         return false;
     }
-    const T getValue () const {return m_val; }
+    const T getValue () const { return m_val; }
     void setValue (const T& val) { m_val = val; }
 private:
     T m_val;
@@ -71,9 +125,9 @@ private:
 class Config {
 public:
     typedef std::map<std::string, ConfigVarBase::ptr> ConfigVarMap;
+    
     // Create a ConfigVar if m_data is empty
-    template <class T>
-    // Only "typename" make the name to be a class
+    template <class T> // Only "typename" make the name to be a class
     static typename ConfigVar<T>::ptr Lookup(const std::string& name,
             const T& default_value, const std::string& description = "") {
         auto tmp = Lookup<T> (name);
@@ -90,6 +144,7 @@ public:
         s_data[name] = v;
         return v;
     }
+
     template <class T>
     static typename ConfigVar<T>::ptr Lookup (const std::string& name) {
         auto it = s_data.find(name);
