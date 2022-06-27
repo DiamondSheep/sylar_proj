@@ -46,7 +46,7 @@ static void ListAllMember (const std::string& prefix,
 void Config::LoadFromYaml(const YAML::Node& root) {
     // <name, node> pair
     std::list<std::pair<std::string, const YAML::Node> > all_nodes;
-
+    // read nodes from yaml file
     ListAllMember ("", root, all_nodes);
 
     for (auto& i : all_nodes) {
@@ -56,7 +56,7 @@ void Config::LoadFromYaml(const YAML::Node& root) {
         }
         // transform to lowercase
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-
+        // find 
         ConfigVarBase::ptr var = LookupBase(key);
         if (var) { // exist
             if (i.second.IsScalar()) {
