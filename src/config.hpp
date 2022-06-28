@@ -13,6 +13,7 @@
 #include <utility>
 #include <boost/lexical_cast.hpp>
 #include <yaml-cpp/yaml.h>
+#include <functional>
 #include "log.hpp"
 
 namespace sylar {
@@ -262,6 +263,7 @@ template <class T,
 class ConfigVar : public ConfigVarBase{
 public:
     typedef std::shared_ptr<ConfigVar> ptr;
+    typedef std::function<void (const T& old_value, const T& new_value)> on_change_callback;
     ConfigVar(const std::string& name, 
               const T& default_value, 
               const std::string& description)
@@ -289,10 +291,37 @@ public:
         return false;
     }
     const T getValue () const { return m_val; }
-    void setValue (const T& val) { m_val = val; }
+    void setValue (const T& val) {
+        if (val == m_val) {
+            return;
+        }
+        // call the callback functions
+        for (auto& f : m_callbacks) {
+            f.second(m_val, val);
+        }
+        m_val = val; 
+    }
     std::string getTypeName () const override { return typeid(T).name(); }
+    
+    // listener operations
+    void addListener(uint64_t key, on_change_callback cb) {
+        m_callbacks[key] = cb;
+    }
+    void delListener(uint64_t key) {
+        m_callbacks.erase(key);
+    }
+    on_change_callback getListener (uint64_t key) {
+        auto it = m_callbacks.find(key);
+        return it == m_callbacks.end() ? nullptr : it->second;
+    }
+    void clearListener () {
+        m_callbacks.clear();
+    }
+
 private:
     T m_val;
+    // function group <key(int64_t, unique, hash), function>
+    std::map<uint64_t, on_change_callback> m_callbacks;
 };
 
 class Config {

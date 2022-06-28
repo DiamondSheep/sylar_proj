@@ -18,7 +18,14 @@ cd sylar_proj
 # build and run
 sh run.sh
 ```
+## How to use
+```
+sylar::Logger g_logger = 
+sylar::LoggerManager::GetInstance()->getLogger(name);
+
+SYLAR_LOG_INFO(g_logger) << "log information";
+```
 
 ## Planning
-- [x] Log
-- [ ] Config
+* [x] Log
+* [ ] Config

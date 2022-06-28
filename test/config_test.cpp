@@ -4,8 +4,6 @@
 
 sylar::ConfigVar<int>::ptr g_int_val_config 
     = sylar::Config::Lookup ("system.port", (int)8080, "system port");
-sylar::ConfigVar<float>::ptr g_int_val_configx
-    = sylar::Config::Lookup ("system.port", (float)8080, "system port");
 sylar::ConfigVar<float>::ptr g_float_val_config 
     = sylar::Config::Lookup ("system.value", (float)10.2f, "system value");
 sylar::ConfigVar<std::vector<int>>::ptr g_int_vec_config 
@@ -47,7 +45,7 @@ void print_yaml (const YAML::Node& node, int level=0) {
 }
 
 void test_yaml () {
-    YAML::Node root = YAML::LoadFile("../conf/log.yml");
+    YAML::Node root = YAML::LoadFile("../conf/test.yml");
     print_yaml(root, 0);
 }
 
@@ -126,6 +124,14 @@ public:
            << " ]";
         return ss.str();
     }
+    bool operator== (const Person& p) const {
+        if (p.m_name == m_name && 
+            p.m_age == m_age && 
+            p.m_sex == m_sex) {
+            return true;
+        }
+        else { return false; }
+    }
 };
 
 // a example to convert complex type
@@ -197,11 +203,19 @@ void test_class () {
     }
 }
 
+void test_callback() {
+    g_person_config->addListener(0, [](const Person& old_value, const Person& new_value) {
+        SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "old value: " << old_value.toString() << " new value: " << new_value.toString();
+    });
+    YAML::Node node = YAML::LoadFile("../conf/log.yml");
+    sylar::Config::LoadFromYaml(node);
+}
+
 int main(int argc, char* argv[]){
 	SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "-- config test\n";
-    // test_yaml();
+    //test_yaml();
     // test_config();
-
-    test_class();
+    // test_class();
+    test_callback();
     return 0;
 }

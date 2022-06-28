@@ -1,4 +1,5 @@
 #include "log.hpp"
+//#include "config.hpp"
 
 namespace sylar{
 /*
@@ -270,6 +271,7 @@ void LogFormatter::parse() {
             // No paired brace in format pattern 
             std::cout << "Pattern parse error: " << m_pattern << " - " << m_pattern.substr(i) << std::endl;
             vec.push_back(std::make_tuple("<<pattern_error>>", fmt_str, 0));
+            m_error = true;
         } 
         //std::cout << "status: " << fmt_status << ", i: " << i << ", str length: " << str.size() << std::endl;
     }
@@ -311,6 +313,7 @@ void LogFormatter::parse() {
             if (it == s_format_items.end()) {
                 // No found
                 m_items.push_back(FormatItem::ptr(new StringFormatItem("<<error_format %" + std::get<0>(i) + ">>")));
+                m_error = true;
             }
             else {
                 m_items.push_back(it->second(std::get<1>(i)));
@@ -339,7 +342,11 @@ std::string LogFormatter::format (std::shared_ptr<Logger> logger_ptr, LogEvent::
  */
 void StdoutLogAppender::log (std::shared_ptr<Logger> logger_ptr,LogEvent::ptr event){
     // print to consoler
-    std::cout << m_formatter->format(logger_ptr, event);
+    if (m_formatter){
+        std::cout << m_formatter->format(logger_ptr, event);
+    }else {
+        std::cout << "No formatter" << std::endl;
+    }
 }
 
 FileLogAppender::FileLogAppender (const std::string& filename)
@@ -388,13 +395,38 @@ void Logger::delAppender (LogAppender::ptr appender){
             }
         }
 }
+void Logger::clearAppender() {
+    m_appenders.clear();    
+}
 void Logger::log(LogLevel::Level level, LogEvent::ptr event){
-    auto p = shared_from_this();
     if (level >= m_level){
-        for (auto& i : m_appenders){
-            i->log(p, event);
+        auto p = shared_from_this();
+        if (! m_appenders.empty()) { 
+            for (auto& i : m_appenders){
+                i->log(p, event);
+            }
+        }
+        else {
+            std::cout << "Not implemented yet. " << std::endl;
         }
     }
+}
+
+LogFormatter::ptr Logger::getFormatter() const {
+    return m_formatter;
+}
+
+void Logger::setFormatter (const LogFormatter::ptr formatter) {
+    m_formatter = formatter;
+}
+
+void Logger::setFormatter (const std::string& pattern) {
+    LogFormatter::ptr new_fmt (new LogFormatter(pattern));
+    if (new_fmt->isError()) { // check
+        std::cout << "Logger setFormatter name=" << m_logname << " value=" << pattern << " invalid pattern. " << std::endl;
+        return;
+    }
+    setFormatter(new_fmt);
 }
 
 /*
@@ -403,6 +435,7 @@ void Logger::log(LogLevel::Level level, LogEvent::ptr event){
 LoggerManager::LoggerManager (){
     m_root.reset(new Logger);
     m_root->addAppender(LogAppender::ptr(new StdoutLogAppender));
+    init();
 }
 
 void LoggerManager::addLogger (const std::string& name, std::shared_ptr<Logger> logger){
@@ -416,13 +449,116 @@ std::shared_ptr<Logger> LoggerManager::getLogger(const std::string& name) {
     auto it = m_loggers.find(name);
     if (it != m_loggers.end()) {
         return it->second;
-    }
-    return m_root;
+    }// create new logger
+    std::shared_ptr<Logger> logger (new Logger (name));
+    m_loggers[name] = logger;
+    return logger;
 }
+
+struct AppenderDefinition {
+    int type = 0;
+    std::string pattern;
+    std::string file;
+    bool operator== (const AppenderDefinition& def) const {
+        return type == def.type &&
+               pattern == def.pattern && 
+               file == def.file;
+    }
+};
+
+struct LogDefinition {
+    std::string name;
+    LogLevel::Level level = LogLevel::OFF;
+    std::string pattern;
+    std::vector<AppenderDefinition> appenders;
+    bool operator== (const LogDefinition& logdef) const {
+        return name == logdef.name &&
+               level == logdef.level && 
+               pattern == logdef.pattern && 
+               appenders == logdef.appenders;
+    }
+    bool operator< (const LogDefinition& logdef) const {
+         return name < logdef.name;
+    }
+};
+
+//TODO 
+//sylar::ConfigVar<std::set<LogDefinition> > g_log_defines = 
+  //  sylar::Config::Lookup("logs", std::set<LogDefinition> (), "logs config");
+
+/*
+// Full Template Specialization
+template<>
+class LexicalCast<std::string, LogDefinition> {
+public:
+    LogDefinition operator() (const std::string& string) const {
+        YAML::Node node = YAML::Load(string);
+        LogDefinition def;
+        def.name = node["name"].as<std::string>();
+        //def.level = node["level"].as<int>();
+        def.pattern = node["pattern"].as<std::string>();
+        return def;
+    }
+};
+
+template<>
+class LexicalCast<LogDefinition, std::string> {
+public:
+    std::string operator() (const LogDefinition& def) {
+        YAML::Node node;
+        node["name"] = def.name;
+        //node["level"] = def.level;
+        node["pattern"] = def.pattern;
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
+    }
+};
+*/
+/*
+struct LogIniter {
+    LogIniter () {
+        g_log_defines->addListener(0xF1E231, [](const std::set<LogDefinition>& old_value, 
+                                                const std::set<LogDefinition>& new_value){
+            // add, modify, delete
+            for (auto& i : new_value) {
+                auto it = old_value.find(i);
+                if (it == old_value.end()) {
+                    // add new logger
+                    std::shared_ptr<Logger> logger (new Logger(i.name));
+                    logger->setLevel(i.level);
+                    if (!i.pattern.empty()) {
+                        // we do NOT add a formatter with error
+                        logger->setFormatter(i.pattern);
+                    }
+                    for (auto& a : i.appenders) {
+
+                    }
+
+                } else {
+                    if (! i == *it ) {
+                        // modify
+
+                    }
+                }
+            }
+            for (auto& i : old_value) {
+                auto it = new_value.find(i);
+                if (it == new_value.end()) {
+                    // delete
+                    SYLAR_LOG_NAME(i.name);
+                    logger->setLevel(LogLevel::OFF);
+                    logger->clearAppender();
+                }
+            }
+        });
+    }
+};
+static LogIniter __log_init;
+*/
 
 void LoggerManager::init() {
 
 }
-
 
 } // end of namespace

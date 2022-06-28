@@ -45,6 +45,7 @@
 #define SYLAR_LOG_FMT_OFF(logger, fmt, ...)   SYLAR_LOG_FMT_LEVEL(logger, LogLevel::OFF, fmt, __VA_ARGS__)
 
 #define SYLAR_LOG_ROOT() sylar::SltLoggerMgr::GetInstance()->getRoot()
+#define SYLAR_LOG_NAME(name) sylar::LoggerManager::GetInstance()->getLogger(name)
 
 namespace sylar{
 
@@ -135,11 +136,13 @@ public:
         virtual ~FormatItem() {}
         virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) = 0;
     };
+    bool isError() const { return m_error; }
 
 private:
     std::string m_pattern;
     std::vector<FormatItem::ptr> m_items;
     std::shared_ptr<Logger> m_logger_ptr;
+    bool m_error = false;
 };
 
 class LogAppender {
@@ -164,10 +167,14 @@ public:
     
     void addAppender (LogAppender::ptr appender);
     void delAppender (LogAppender::ptr appender);
+    void clearAppender ();
 
     // Level control
     LogLevel::Level getLevel () const { return m_level; }
     void setLevel (LogLevel::Level level) { m_level = level; }
+    LogFormatter::ptr getFormatter() const;
+    void setFormatter (const LogFormatter::ptr formatter);
+    void setFormatter (const std::string& str);
 
     // log 
     void log (LogLevel::Level level, LogEvent::ptr event);
@@ -183,6 +190,7 @@ private:
     LogLevel::Level m_level; 
     std::list<LogAppender::ptr> m_appenders;
     LogFormatter::ptr m_formatter;
+    //std::shared_ptr<Logger> m_root; // default logger
 };
 
 class LoggerManager {
