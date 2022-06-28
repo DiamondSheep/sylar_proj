@@ -8,16 +8,17 @@ Thanks to Sylar.
 ## How to build
 
 ```
+# install required libs
+# you should build these libs from source code while working on server. 
+sudo apt update
+sudo apt install libboost-dev libyaml-cpp-dev
+
 git clone https://github.com/DiamondSheep/sylar_proj.git
 
 cd sylar_proj
 
-mkdir build
-cd build
-
-cmake .. && make
-
-./sylar
+# build and run
+sh run.sh
 ```
 
 ## Planning

@@ -179,12 +179,12 @@ public:
     }
 };
 
-//TODO------------------------------------------------------------
 // string to map
 template<class T>
-class LexicalCast<std::string, std::map<T> > {
+class LexicalCast<std::string, std::map<std::string, T> > {
 public:
     std::map<T> operator() (const std::string& string) {
+
         YAML::Node node = YAML::Load(string);
         typename std::map<T> vec;
         std::stringstream ss;
