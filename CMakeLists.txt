@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF) 
 set(CMAKE_CXX_FLAGS -g) 
 
-find_package(Boost 1.67.0 COMPONENTS filesystem regex system)
+find_package(Boost)
 find_package(yaml-cpp)
 
 include_directories(src/)

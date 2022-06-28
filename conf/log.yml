@@ -21,3 +21,36 @@ system:
   int_list: [20, 50]
   int_set: [24, 67]
   int_uset: [20, 99]
+  int_map: 
+    "x": 3
+    "z": 4
+  int_umap:
+    "a": 1
+    "c": 3
+
+class:
+  person:
+    name: Peter
+    age: 12
+    sex: true
+  map: 
+    01:
+      name: latex
+      age: 18
+      sex: false
+    02:
+      name: sam
+      age: 29
+      sex: false
+  mapvec:
+    class1:
+      - name: gao
+        age: 20
+        sex: true
+      - name: tao
+        age: 23
+        sex: false
+    class0:
+      - name: guo
+        age: 12
+        sex: true

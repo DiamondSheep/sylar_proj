@@ -33,12 +33,13 @@ public:
 
     virtual std::string toString() = 0;
     virtual bool fromString (const std::string& val) = 0;
+    virtual std::string getTypeName () const = 0;
 protected:
     std::string m_name;
     std::string m_description;
 };
 
-// From type F to type T
+// Convert From type F to type T
 template<class F, class T>
 class LexicalCast {
 public:
@@ -183,28 +184,63 @@ public:
 template<class T>
 class LexicalCast<std::string, std::map<std::string, T> > {
 public:
-    std::map<T> operator() (const std::string& string) {
-
+    std::map<std::string, T> operator() (const std::string& string) {
         YAML::Node node = YAML::Load(string);
-        typename std::map<T> vec;
+        typename std::map<std::string, T> map;
         std::stringstream ss;
-        for (size_t i = 0; i < node.size(); ++i) {
+        
+        for (auto it = node.begin(); it != node.end(); ++it) {
             ss.str(""); // flesh stringstream 
-            ss << node[i];
-            vec.insert(LexicalCast<std::string, T>() (ss.str()));
+            ss << it->second;
+            map.insert(std::make_pair(it->first.Scalar(),
+                        LexicalCast<std::string, T>() (ss.str())));
         }
-        return vec;
+        return map;
     }
 };
 
 // map to string
 template<class F>
-class LexicalCast<std::map<F>, std::string> {
+class LexicalCast<std::map<std::string, F>, std::string> {
 public:
-    std::string operator() (const std::map<F>& vec) {
+    std::string operator() (const std::map<std::string, F>& map) {
         YAML::Node node;
-        for (auto& i : vec) {
-            node.push_back(YAML::Load(LexicalCast<F, std::string>() (i)));
+        for (auto& i : map) {
+            node[i.first] = YAML::Load(LexicalCast<F, std::string>() (i.second));
+        }
+        std::stringstream ss;
+        ss << node;
+        return ss.str();
+    }
+};
+
+// string to unordered_map
+template<class T>
+class LexicalCast<std::string, std::unordered_map<std::string, T> > {
+public:
+    std::unordered_map<std::string, T> operator() (const std::string& string) {
+        YAML::Node node = YAML::Load(string);
+        typename std::unordered_map<std::string, T> map;
+        std::stringstream ss;
+        
+        for (auto it = node.begin(); it != node.end(); ++it) {
+            ss.str(""); // flesh stringstream 
+            ss << it->second;
+            map.insert(std::make_pair(it->first.Scalar(),
+                        LexicalCast<std::string, T>() (ss.str())));
+        }
+        return map;
+    }
+};
+
+// map to string
+template<class F>
+class LexicalCast<std::unordered_map<std::string, F>, std::string> {
+public:
+    std::string operator() (const std::unordered_map<std::string, F>& map) {
+        YAML::Node node;
+        for (auto& i : map) {
+            node[i.first] = YAML::Load(LexicalCast<F, std::string>() (i.second));
         }
         std::stringstream ss;
         ss << node;
@@ -254,6 +290,7 @@ public:
     }
     const T getValue () const { return m_val; }
     void setValue (const T& val) { m_val = val; }
+    std::string getTypeName () const override { return typeid(T).name(); }
 private:
     T m_val;
 };
@@ -266,11 +303,20 @@ public:
     template <class T> // Only "typename" make the name to be a class
     static typename ConfigVar<T>::ptr Lookup(const std::string& name,
             const T& default_value, const std::string& description = "") {
-        auto tmp = Lookup<T> (name);
-        if (tmp) {
-            // found
-            SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "Lookup name=" << name << " exists";
-        }
+        auto it = s_data.find(name);
+        if (it != s_data.end()) {
+            // exist
+            auto tmp = std::dynamic_pointer_cast<ConfigVar<T> > (it->second);
+            if (tmp) {
+                SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "Lookup name=" << name << " exists";
+                return tmp;
+            }
+            else {
+                SYLAR_LOG_ERROR(SYLAR_LOG_ROOT()) << "" << name << " exists but type " << it->second->getTypeName() << " is not supported.";
+                return nullptr;
+            }
+        } 
+        // do not exist
         if (name.find_first_not_of ("abcdefghijklmnopqrstuvwxyzABCDEFGHIMNOPQRSTUVWXYZ._0123456789")!=std::string::npos) {
             SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "Lookup name invalid " << name;
             throw std::invalid_argument(name);
@@ -282,9 +328,11 @@ public:
     }
 
     template <class T>
-    static typename ConfigVar<T>::ptr Lookup (const std::string& name) {
+    static typename ConfigVar<T>::ptr find (const std::string& name) {
+        // return corresponding pointer by name
         auto it = s_data.find(name);
         if (it == s_data.end()) {
+            SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << name << " does not exist.";
             return nullptr;
         }
         return std::dynamic_pointer_cast<ConfigVar<T> > (it->second);
