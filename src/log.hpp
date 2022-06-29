@@ -6,6 +6,7 @@
 #include <time.h>
 #include <stdarg.h>
 #include <cstring>
+#include <cassert>
 
 // C++ libraries
 #include <string>
@@ -45,7 +46,7 @@
 #define SYLAR_LOG_FMT_OFF(logger, fmt, ...)   SYLAR_LOG_FMT_LEVEL(logger, LogLevel::OFF, fmt, __VA_ARGS__)
 
 #define SYLAR_LOG_ROOT() sylar::SltLoggerMgr::GetInstance()->getRoot()
-#define SYLAR_LOG_NAME(name) sylar::LoggerManager::GetInstance()->getLogger(name)
+#define SYLAR_LOG_NAME(name) sylar::SltLoggerMgr::GetInstance()->getLogger(name)
 
 namespace sylar{
 
@@ -65,6 +66,7 @@ public:
     };
     // Convert to string
     static const char* ToString(const Level level);
+    static LogLevel::Level FromString(const char* str);
 };
 
 class LogEvent{

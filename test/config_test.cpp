@@ -2,6 +2,7 @@
 #include "log.hpp"
 #include <yaml-cpp/yaml.h>
 
+/*
 sylar::ConfigVar<int>::ptr g_int_val_config 
     = sylar::Config::Lookup ("system.port", (int)8080, "system port");
 sylar::ConfigVar<float>::ptr g_float_val_config 
@@ -210,12 +211,19 @@ void test_callback() {
     YAML::Node node = YAML::LoadFile("../conf/log.yml");
     sylar::Config::LoadFromYaml(node);
 }
+*/
+void test_log() {
+    YAML::Node root = YAML::LoadFile("../conf/test.yml");
+    sylar::Config::LoadFromYaml(root);
+}
 
 int main(int argc, char* argv[]){
 	SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "-- config test\n";
-    //test_yaml();
+    // test_yaml();
     // test_config();
     // test_class();
-    test_callback();
+    // test_callback();
+    test_log();
+    SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "-- config finished";
     return 0;
 }
