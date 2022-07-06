@@ -1,15 +1,17 @@
 logs:
   - name: root
-    level: info
-    formatter: "%d%T%m%n"
+    level: INFO
     appender:
       - type: FileLogAppender
+        pattern: "%d%T%m%n"
         file: ../data/log.txt
       - type: StdoutLogAppender
+        pattern: "%d%T%m%n"
   - name: system
-    level: debug
-    formatter: "%d%T%m%n"
+    level: DEBUG
     appender:
       - type: FileLogAppender
         file: ../data/log.txt
+        pattern: "%d%T%m%n"
       - type: StdoutLogAppender
+        pattern: "%d%T%m%n"

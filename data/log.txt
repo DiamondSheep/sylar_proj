@@ -1,3 +1,5 @@
-2022-06-28 22:57:09	[ALL]	</home/gaoyangcheng/Code/sylar_proj/test/logger_test.cpp:26>	0	test stringstream 
+2022-07-06 23:52:15	hello system
+
+aoyangcheng/Code/sylar_proj/test/logger_test.cpp:26>	0	test stringstream 
 2022-06-28 22:57:09	[ALL]	</home/gaoyangcheng/Code/sylar_proj/test/logger_test.cpp:30>	0	test level 
 2022-06-28 22:57:09	[ALL]	</home/gaoyangcheng/Code/sylar_proj/test/logger_test.cpp:31>	0	test fmt 

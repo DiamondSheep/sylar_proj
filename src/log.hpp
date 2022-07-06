@@ -66,7 +66,7 @@ public:
     };
     // Convert to string
     static const char* ToString(const Level level);
-    static LogLevel::Level FromString(const char* str);
+    static LogLevel::Level FromString(const std::string& str);
 };
 
 class LogEvent{
@@ -130,6 +130,11 @@ public:
     LogFormatter(const std::string& pattern = ""); 
     void parse();
     std::string format(std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event);
+    std::string getPattern() const { return m_pattern; }
+    void setPattern(const std::string& pattern) {
+        m_pattern = pattern;
+        parse();
+    }
 
     class FormatItem{
     public:
@@ -153,8 +158,10 @@ public:
     
     virtual ~LogAppender() {} // free space of derived class
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) = 0;
+    virtual std::string toYamlString() const = 0;
     
-    void setFormatter (LogFormatter::ptr formatter) { m_formatter = formatter; }
+    virtual void setFormatter (LogFormatter::ptr formatter) { m_formatter = formatter; }
+    virtual void setFormatter (const std::string& pattern) = 0; 
     LogFormatter::ptr getFormatter () const { return m_formatter; }
 
 protected:
@@ -187,6 +194,7 @@ public:
     void warn (LogEvent::ptr event)  { log (LogLevel::WARN, event);  }
     void error (LogEvent::ptr event) { log (LogLevel::ERROR, event); }
     
+    std::string toYamlString () const;
 private:
     std::string m_logname;
     LogLevel::Level m_level; 
@@ -202,6 +210,7 @@ public:
     void addLogger (const std::string& name, std::shared_ptr<Logger> logger);
     void init();
     std::shared_ptr<Logger> getRoot() const { return m_root; }
+    std::string toYamlString() const;
 
 private:
     std::map<std::string, std::shared_ptr<Logger> > m_loggers;
@@ -218,6 +227,9 @@ class StdoutLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) override;
+    virtual std::string toYamlString() const override;
+    virtual void setFormatter (LogFormatter::ptr formatter) override { m_formatter = formatter; }
+    virtual void setFormatter(const std::string& pattern) override;
 private:
 };
 
@@ -225,6 +237,9 @@ class FileLogAppender : public LogAppender {
 public:
     FileLogAppender (const std::string& filename);
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) override;
+    virtual std::string toYamlString() const override;
+    virtual void setFormatter (LogFormatter::ptr formatter) override { m_formatter = formatter; }
+    virtual void setFormatter(const std::string& pattern) override;
     bool reopen (); // reopen the file, return True if success
 private:
     std::string m_filename;

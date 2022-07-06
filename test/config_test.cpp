@@ -213,17 +213,25 @@ void test_callback() {
 }
 */
 void test_log() {
+    static sylar::Logger::ptr system_log = SYLAR_LOG_NAME("system");
+    // Different from the original version
+    // You have to add the appender by your self
+    system_log->addAppender(sylar::LogAppender::ptr(new sylar::StdoutLogAppender));
+    SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
+    std::cout << sylar::SltLoggerMgr::GetInstance()->toYamlString() << std::endl; 
     YAML::Node root = YAML::LoadFile("../conf/test.yml");
     sylar::Config::LoadFromYaml(root);
+    std::cout << sylar::SltLoggerMgr::GetInstance()->toYamlString() << std::endl; 
+    SYLAR_LOG_INFO(system_log) << "hello system" << std::endl;
 }
 
 int main(int argc, char* argv[]){
-	SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "-- config test\n";
+	SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "config test\n";
     // test_yaml();
     // test_config();
     // test_class();
     // test_callback();
     test_log();
-    SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "-- config finished";
+    SYLAR_LOG_ALL(SYLAR_LOG_ROOT()) << "config finished";
     return 0;
 }

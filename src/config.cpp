@@ -33,12 +33,16 @@ static void ListAllMember (const std::string& prefix,
                           output);
         }
     }
-    else if (node.IsSequence()) {
+    /*
+    else if (node.IsSequence()) { 
+        // travel through the sequence
+        // casue bugs in logger
         for (size_t i = 0; i != node.size(); ++i) {
             ListAllMember(prefix.empty() ? node[i].Scalar()
                                          : prefix + node[i].Scalar(), node[i], output);
         }
     }
+    */
 }
 
 void Config::LoadFromYaml(const YAML::Node& root) {
