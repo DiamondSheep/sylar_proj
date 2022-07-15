@@ -35,7 +35,6 @@ Thread::Thread(std::function<void()> callback, const std::string& name)
         SYLAR_LOG_ERROR(g_logger) << "pthread_create thread fail, rt=" << rt << " name=" << m_name;
         throw std::logic_error("pthread_create error");
     }
-    m_thread = 0;
 }
 
 Thread::~Thread() {
