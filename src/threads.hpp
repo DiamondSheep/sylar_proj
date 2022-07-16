@@ -4,6 +4,7 @@
 #include <thread>
 #include <functional>
 #include <semaphore.h>
+#include <cerrno>
 #include "log.hpp"
 #include "utils.hpp"
 
@@ -12,12 +13,129 @@ namespace sylar {
 class Semaphore {
 public:
     Semaphore(uint32_t count = 0);
+    ~Semaphore();
+    void wait();
+    void notify();
+
 private:
     Semaphore(const Semaphore&) = delete;
     Semaphore(const Semaphore&&) = delete;
     Semaphore operator=(const Semaphore&) = delete;
     // data
     sem_t m_semaphore;
+};
+
+// lock in constructor
+// unlock in destructor
+template<class T>
+struct ScopedLockImpl {
+public:
+    ScopedLockImpl(T& mutex)
+    :m_mutex(mutex) {
+        m_mutex.lock();
+        m_locked = true;
+    }
+    ~ScopedLockImpl() {
+        unlock();
+    }
+    void lock() {
+        if (!m_locked) {
+            // prevent dead lock
+            m_mutex.lock();
+            m_locked = true;
+        }
+    }
+    void unlock() {
+        if (m_locked) {
+            m_mutex.unlock();
+            m_locked = false;
+        }
+    }
+private:
+    T& m_mutex;
+    bool m_locked;
+};
+
+template<class T>
+class ReadScopedLockImpl {
+public:
+    ReadScopedLockImpl(T& mutex)
+    :m_mutex(mutex) {
+        m_mutex.rdlock();
+        m_locked = true;
+    }
+    ~ReadScopedLockImpl() {
+        unlock();
+    }
+    void lock() {
+        if (!m_locked) {
+            // prevent dead lock
+            m_mutex.rdlock();
+            m_locked = true;
+        }
+    }
+    void unlock() {
+        if (m_locked) {
+            m_mutex.unlock();
+            m_locked = false;
+        }
+    }
+private:
+    T& m_mutex;
+    bool m_locked;
+};
+
+template<class T>
+class WriteScopedLockImpl {
+public:
+    WriteScopedLockImpl(T& mutex)
+    :m_mutex(mutex) {
+        m_mutex.wrlock();
+        m_locked = true;
+    }
+    ~WriteScopedLockImpl() {
+        unlock();
+    }
+    void lock() {
+        if (!m_locked) {
+            // prevent dead lock
+            m_mutex.wrlock();
+            m_locked = true;
+        }
+    }
+    void unlock() {
+        if (m_locked) {
+            m_mutex.unlock();
+            m_locked = false;
+        }
+    }
+private:
+    T& m_mutex;
+    bool m_locked;
+};
+
+// Read-write splitting
+class Mutex_RW {
+public:
+    typedef ReadScopedLockImpl<Mutex_RW> ReadLock;
+    typedef WriteScopedLockImpl<Mutex_RW> WriteLock;
+    Mutex_RW() {
+        pthread_rwlock_init(&m_lock, nullptr);
+    }
+    ~Mutex_RW() {
+        pthread_rwlock_destroy(&m_lock);
+    }
+    void rdlock() {
+        pthread_rwlock_rdlock(&m_lock);
+    }  
+    void wrlock() {
+        pthread_rwlock_wrlock(&m_lock);
+    }
+    void unlock() {
+        pthread_rwlock_unlock(&m_lock);
+    }
+private:
+    pthread_rwlock_t m_lock;
 };
 
 class Thread {
@@ -42,6 +160,8 @@ private:
     pthread_t m_thread;
     std::function<void()> m_callback;
     std::string m_name;
+    
+    Semaphore m_semaphore;
 };
 
 }

@@ -8,7 +8,7 @@ static thread_local std::string t_thread_name = "UNKNOWN";
 static Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
 
-Semaphore::Semaphore(uint32_t count = 0) {
+Semaphore::Semaphore(uint32_t count) {
     // count - The number of concurrent threads
     /*
        If pshared has the value 0, then the semaphore is shared between
@@ -24,24 +24,26 @@ Semaphore::Semaphore(uint32_t count = 0) {
     }
 }
 Semaphore::~Semaphore() {
-    sem_destroy()&m_semaphore;
+    sem_destroy(&m_semaphore);
 }
 
 void Semaphore::wait() {
     /*
     semaphore has two types function for wait:
-    1. sem_wait(sem_t* sem)
+    1. sem_wait(sem_t* sem) -> 0 if success
         block
     2. sem_trywait(sem_t* sem)
         unblock
     */
-    while(true) {
-        if (!sem_wait(&m_semaphore)) {
-            return;
+    if (sem_wait(&m_semaphore)) {
+            throw std::logic_error("sem_wait error");
         }
+}
+void Semaphore::notify() {
+    if (sem_post(&m_semaphore)) {
+        throw std::logic_error("sem_post error");
     }
 }
-void Semaphore::notify() {}
 
 Thread* Thread::GetThis() {
     return t_thread;
@@ -75,6 +77,8 @@ Thread::Thread(std::function<void()> callback, const std::string& name)
         SYLAR_LOG_ERROR(g_logger) << "pthread_create thread fail, rt=" << rt << " name=" << m_name;
         throw std::logic_error("pthread_create error");
     }
+    m_semaphore.wait();
+
 }
 
 Thread::~Thread() {
@@ -102,10 +106,10 @@ void* Thread::run (void* arg) {
     t_thread_name = thread->m_name;
     thread->m_id = GetThreadID();
     pthread_setname_np(pthread_self(), thread->m_name.substr(0,15).c_str());
-
     std::function<void()> callback;
     callback.swap(thread->m_callback); // for references free up
-    
+    // ensure the callback function can be excuted here
+    thread->m_semaphore.notify();
     callback();
     return 0;
 }
