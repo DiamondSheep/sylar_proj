@@ -7,6 +7,42 @@ static thread_local Thread* t_thread = nullptr;
 static thread_local std::string t_thread_name = "UNKNOWN";
 static Logger::ptr g_logger = SYLAR_LOG_NAME("system");
 
+
+Semaphore::Semaphore(uint32_t count = 0) {
+    // count - The number of concurrent threads
+    /*
+       If pshared has the value 0, then the semaphore is shared between
+       the threads of a process, and should be located at some address
+       that is visible to all threads (e.g., a global variable, or a
+       variable allocated dynamically on the heap).
+
+       If pshared is nonzero, then the semaphore is shared between
+       processes, and should be located in a region of shared memory
+    */
+    if (sem_init(&m_semaphore, 0, count)) {
+        throw std::logic_error("semi_init error");
+    }
+}
+Semaphore::~Semaphore() {
+    sem_destroy()&m_semaphore;
+}
+
+void Semaphore::wait() {
+    /*
+    semaphore has two types function for wait:
+    1. sem_wait(sem_t* sem)
+        block
+    2. sem_trywait(sem_t* sem)
+        unblock
+    */
+    while(true) {
+        if (!sem_wait(&m_semaphore)) {
+            return;
+        }
+    }
+}
+void Semaphore::notify() {}
+
 Thread* Thread::GetThis() {
     return t_thread;
 }
@@ -27,15 +63,18 @@ void Thread::SetName(const std::string& name) {
 
 Thread::Thread(std::function<void()> callback, const std::string& name)
 : m_callback(callback), m_name(name) {
+    /*
+     * feed a function (concurrence) and the name to execute in different thread
+    */
     if (name.empty()) {
         m_name = "UNKNOWN";
     }
+    // thread pointer(to be created), attribution, function, args to function
     int rt = pthread_create(&m_thread, nullptr, &Thread::run, this);
     if (rt) {
         SYLAR_LOG_ERROR(g_logger) << "pthread_create thread fail, rt=" << rt << " name=" << m_name;
         throw std::logic_error("pthread_create error");
     }
-    m_thread = 0;
 }
 
 Thread::~Thread() {

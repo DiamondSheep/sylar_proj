@@ -134,7 +134,7 @@ class ThreadIDFormatItem : public LogFormatter::FormatItem{
 public:
     ThreadIDFormatItem (const std::string& format = ""){ }
     virtual void format(std::ostream& os, LogLevel::Level level, LogEvent::ptr event) override{
-        os << event->getThreadID();
+        os << GetThreadID();
     }
 };
 

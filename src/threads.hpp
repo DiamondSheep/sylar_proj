@@ -3,10 +3,22 @@
 
 #include <thread>
 #include <functional>
+#include <semaphore.h>
 #include "log.hpp"
 #include "utils.hpp"
 
 namespace sylar {
+
+class Semaphore {
+public:
+    Semaphore(uint32_t count = 0);
+private:
+    Semaphore(const Semaphore&) = delete;
+    Semaphore(const Semaphore&&) = delete;
+    Semaphore operator=(const Semaphore&) = delete;
+    // data
+    sem_t m_semaphore;
+};
 
 class Thread {
 public:
