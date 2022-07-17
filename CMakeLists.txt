@@ -14,10 +14,10 @@ find_package(Threads REQUIRED)
 
 include_directories(src/)
 set(LIB_SRC
-    src/log.cpp
     src/utils.cpp 
     src/config.cpp 
     src/threads.cpp
+    src/log.cpp
     )
 add_library(sylar SHARED ${LIB_SRC})
 force_redefine_file_macro_for_sources(sylar)  # __FILE__

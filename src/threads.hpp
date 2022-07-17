@@ -5,7 +5,7 @@
 #include <functional>
 #include <semaphore.h>
 #include <cerrno>
-#include "log.hpp"
+#include <atomic>
 #include "utils.hpp"
 
 namespace sylar {
@@ -114,6 +114,46 @@ private:
     bool m_locked;
 };
 
+class NullMutex {
+public:
+    typedef ScopedLockImpl<NullMutex> Lock;
+    NullMutex() {}
+    ~NullMutex() {}
+    void lock() {};
+    void unlock() {};
+private:
+};
+
+class NullMutex_RW {
+public:
+    typedef ReadScopedLockImpl<NullMutex_RW> ReadLock;
+    typedef WriteScopedLockImpl<NullMutex_RW> WriteLock;
+    NullMutex_RW() {}
+    ~NullMutex_RW() {}
+    void lock() {}
+    void unlock() {}
+private:
+};
+
+class Mutex {
+public:
+    typedef ScopedLockImpl<Mutex> Lock;
+    Mutex() {
+        pthread_mutex_init(&m_lock, nullptr);
+    }
+    ~Mutex() {
+        pthread_mutex_destroy(&m_lock);
+    }
+    void lock() {
+        pthread_mutex_lock(&m_lock);
+    }
+    void unlock() {
+        pthread_mutex_unlock(&m_lock);
+    }
+private:
+    pthread_mutex_t m_lock;
+};
+
 // Read-write splitting
 class Mutex_RW {
 public:
@@ -138,6 +178,47 @@ private:
     pthread_rwlock_t m_lock;
 };
 
+class SpinLock {
+public:
+    typedef ScopedLockImpl<SpinLock> Lock;
+    SpinLock() {
+        pthread_spin_init(&m_lock, 0);
+    }
+    ~SpinLock() {
+        pthread_spin_destroy(&m_lock);
+    }
+    void lock() {
+        pthread_spin_lock(&m_lock);
+    }
+    void unlock() {
+        pthread_spin_unlock(&m_lock);
+    }
+private:
+    pthread_spinlock_t m_lock;
+};
+
+class CASLock {
+public:
+    typedef ScopedLockImpl<CASLock> Lock;
+    CASLock() {
+        m_lock.clear();
+    }
+    ~CASLock() {
+
+    }
+    void lock() {
+        //while (std::atomic_flag_test_and_set_explicit(&m_lock, std::memory_order_acquire));
+        while (m_lock.test_and_set(std::memory_order_acquire));
+    }
+    void unlock() {
+        //std::atomic_flag_clear_explicit(&m_lock, std::memory_order_acquire);
+        m_lock.clear(std::memory_order_acquire);
+    }
+private:
+    volatile std::atomic_flag m_lock;
+};
+
+// Thread to run function
 class Thread {
 public:
     typedef std::shared_ptr<Thread> ptr;

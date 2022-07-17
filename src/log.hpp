@@ -22,6 +22,7 @@
 
 #include "utils.hpp"
 #include "singleton.hpp"
+#include "threads.hpp"
 
 #define SYLAR_LOG_LEVEL(logger, level)\
     if (logger->getLevel() <= level)\
@@ -155,23 +156,25 @@ private:
 class LogAppender {
 public:
     typedef std::shared_ptr<LogAppender> ptr;
-    
+    typedef CASLock MutexType;
     virtual ~LogAppender() {} // free space of derived class
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) = 0;
-    virtual std::string toYamlString() const = 0;
+    virtual std::string toYamlString() = 0;
     
-    virtual void setFormatter (LogFormatter::ptr formatter) { m_formatter = formatter; }
+    virtual void setFormatter (LogFormatter::ptr formatter);
     virtual void setFormatter (const std::string& pattern) = 0; 
-    LogFormatter::ptr getFormatter () const { return m_formatter; }
+    LogFormatter::ptr getFormatter ();
 
 protected:
     LogFormatter::ptr m_formatter;
+    MutexType m_mutex;
 };
 
 // provide share_from_this() to generate a pointer of this
 class Logger : public std::enable_shared_from_this<Logger> {
 public:
     typedef std::shared_ptr<Logger> ptr;
+    typedef CASLock MutexType;
     Logger(const std::string& LogName = "root");
     
     void addAppender (LogAppender::ptr appender);
@@ -181,7 +184,7 @@ public:
     // Level control
     LogLevel::Level getLevel () const { return m_level; }
     void setLevel (LogLevel::Level level) { m_level = level; }
-    LogFormatter::ptr getFormatter() const;
+    LogFormatter::ptr getFormatter();
     void setFormatter (const LogFormatter::ptr formatter);
     void setFormatter (const std::string& str);
 
@@ -194,27 +197,30 @@ public:
     void warn (LogEvent::ptr event)  { log (LogLevel::WARN, event);  }
     void error (LogEvent::ptr event) { log (LogLevel::ERROR, event); }
     
-    std::string toYamlString () const;
+    std::string toYamlString ();
 private:
     std::string m_logname;
     LogLevel::Level m_level; 
     std::list<LogAppender::ptr> m_appenders;
     LogFormatter::ptr m_formatter;
+    MutexType m_mutex;
     //std::shared_ptr<Logger> m_root; // default logger
 };
 
 class LoggerManager {
 public:
+    typedef CASLock MutexType;
     LoggerManager ();
     std::shared_ptr<Logger> getLogger(const std::string& name);
     void addLogger (const std::string& name, std::shared_ptr<Logger> logger);
     void init();
     std::shared_ptr<Logger> getRoot() const { return m_root; }
-    std::string toYamlString() const;
+    std::string toYamlString();
 
 private:
     std::map<std::string, std::shared_ptr<Logger> > m_loggers;
     std::shared_ptr<Logger> m_root;
+    MutexType m_mutex;
 };
 
 /*
@@ -227,7 +233,7 @@ class StdoutLogAppender : public LogAppender {
 public:
     typedef std::shared_ptr<StdoutLogAppender> ptr;
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) override;
-    virtual std::string toYamlString() const override;
+    virtual std::string toYamlString() override;
     virtual void setFormatter (LogFormatter::ptr formatter) override { m_formatter = formatter; }
     virtual void setFormatter(const std::string& pattern) override;
 private:
@@ -237,7 +243,7 @@ class FileLogAppender : public LogAppender {
 public:
     FileLogAppender (const std::string& filename);
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) override;
-    virtual std::string toYamlString() const override;
+    virtual std::string toYamlString() override;
     virtual void setFormatter (LogFormatter::ptr formatter) override { m_formatter = formatter; }
     virtual void setFormatter(const std::string& pattern) override;
     bool reopen (); // reopen the file, return True if success
