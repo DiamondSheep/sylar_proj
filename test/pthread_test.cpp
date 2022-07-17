@@ -27,7 +27,7 @@ void fun1() {
 }
 
 void fun2() {
-    int count = 30000;
+    int count = 1;
     while(count){
         SYLAR_LOG_INFO(g_logger) << "==============================================================";
         count --;
@@ -35,7 +35,7 @@ void fun2() {
 }
 
 void fun3() {
-    int count = 30000;
+    int count = 1;
     while(count) {
         SYLAR_LOG_INFO(g_logger) << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++";
         count --;

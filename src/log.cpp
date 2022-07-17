@@ -416,8 +416,11 @@ FileLogAppender::FileLogAppender (const std::string& filename)
 }
 
 void FileLogAppender::log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) {
+    // TODO: reopen file to check
     MutexType::Lock lock(m_mutex);
-    m_filestream << m_formatter->format(logger_ptr, event);
+    if (!(m_filestream << m_formatter->format(logger_ptr, event))) {
+        std::cout << "FileLogAppender log error" << std::endl;
+    }
 }
 
 bool FileLogAppender::reopen (){

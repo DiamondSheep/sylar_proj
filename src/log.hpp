@@ -156,7 +156,7 @@ private:
 class LogAppender {
 public:
     typedef std::shared_ptr<LogAppender> ptr;
-    typedef CASLock MutexType;
+    typedef SpinLock MutexType; // used Mutex type
     virtual ~LogAppender() {} // free space of derived class
     virtual void log (std::shared_ptr<Logger> logger_ptr, LogEvent::ptr event) = 0;
     virtual std::string toYamlString() = 0;
@@ -174,7 +174,7 @@ protected:
 class Logger : public std::enable_shared_from_this<Logger> {
 public:
     typedef std::shared_ptr<Logger> ptr;
-    typedef CASLock MutexType;
+    typedef SpinLock MutexType;
     Logger(const std::string& LogName = "root");
     
     void addAppender (LogAppender::ptr appender);
@@ -209,7 +209,7 @@ private:
 
 class LoggerManager {
 public:
-    typedef CASLock MutexType;
+    typedef SpinLock MutexType;
     LoggerManager ();
     std::shared_ptr<Logger> getLogger(const std::string& name);
     void addLogger (const std::string& name, std::shared_ptr<Logger> logger);
@@ -250,6 +250,7 @@ public:
 private:
     std::string m_filename;
     std::fstream m_filestream;
+    uint64_t m_lastTime;
 };
 
 typedef Singleton<LoggerManager> SltLoggerMgr;
