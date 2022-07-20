@@ -205,7 +205,7 @@ void test_class () {
 }
 
 void test_callback() {
-    g_person_config->addListener(0, [](const Person& old_value, const Person& new_value) {
+    g_person_config->addListener([](const Person& old_value, const Person& new_value) {
         SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "old value: " << old_value.toString() << " new value: " << new_value.toString();
     });
     YAML::Node node = YAML::LoadFile("../conf/log.yml");

@@ -691,8 +691,8 @@ sylar::ConfigVar<std::set<LogDefinition> >::ptr g_log_defines =
 struct LogIniter {
     LogIniter () {
         // add callback function to config
-        g_log_defines->addListener(0xF1E231, [](const std::set<LogDefinition>& old_value, 
-                                                const std::set<LogDefinition>& new_value) {
+        auto key = g_log_defines->addListener([](const std::set<LogDefinition>& old_value, 
+                                                 const std::set<LogDefinition>& new_value) {
             SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << "on logger changed";
             // operations
             for (auto& i : new_value) {

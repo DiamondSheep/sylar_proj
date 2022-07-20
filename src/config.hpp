@@ -14,13 +14,16 @@
 #include <boost/lexical_cast.hpp>
 #include <yaml-cpp/yaml.h>
 #include <functional>
+
 #include "log.hpp"
+#include "threads.hpp"
 
 namespace sylar {
 
 class ConfigVarBase {
 public:
     typedef std::shared_ptr<ConfigVarBase> ptr;
+    typedef Mutex_RW MutexType; // consider more read cases
     ConfigVarBase (const std::string& name , const std::string& description)
     : m_name(name), 
       m_description(description) {
@@ -274,6 +277,7 @@ public:
     std::string toString() override {
         try {
             //return boost::lexical_cast<std::string> (m_val); // Directly convert to string
+            MutexType::ReadLock lock(m_lock);
             return ToStr() (m_val);
         } catch (std::exception& e) {
             SYLAR_LOG_LEVEL(SYLAR_LOG_ROOT(), LogLevel::ALL) << "ConfigVar::toString exception" << e.what() << " convert " << typeid(m_val).name() << " to string.";
@@ -291,31 +295,46 @@ public:
         }
         return false;
     }
-    const T getValue () const { return m_val; }
+    const T getValue () {
+        MutexType::ReadLock lock(m_lock);
+        return m_val; 
+    }
     void setValue (const T& val) {
-        if (val == m_val) {
-            return;
+        { // to release the mutex
+            if (val == m_val) {
+                return;
+            }
+            MutexType::WriteLock lock(m_lock);
+            // call the callback functions
+            for (auto& f : m_callbacks) {
+                f.second(m_val, val);
+            }
         }
-        // call the callback functions
-        for (auto& f : m_callbacks) {
-            f.second(m_val, val);
-        }
+        MutexType::ReadLock lock(m_lock);
         m_val = val; 
     }
     std::string getTypeName () const override { return typeid(T).name(); }
     
     // listener operations
-    void addListener(uint64_t key, on_change_callback cb) {
-        m_callbacks[key] = cb;
+    // return the key of callback function
+    uint64_t addListener(on_change_callback cb) {
+        static uint64_t s_fun_id = 0;
+        MutexType::WriteLock lock(m_lock);
+        ++s_fun_id;
+        m_callbacks[s_fun_id] = cb;
+        return s_fun_id;
     }
     void delListener(uint64_t key) {
+        MutexType::WriteLock lock(m_lock);
         m_callbacks.erase(key);
     }
     on_change_callback getListener (uint64_t key) {
+        MutexType::ReadLock lock(m_lock);
         auto it = m_callbacks.find(key);
         return it == m_callbacks.end() ? nullptr : it->second;
     }
     void clearListener () {
+        MutexType::WriteLock lock(m_lock);
         m_callbacks.clear();
     }
 
@@ -323,16 +342,18 @@ private:
     T m_val;
     // function group <key(int64_t, unique, hash), function>
     std::map<uint64_t, on_change_callback> m_callbacks;
+    MutexType m_lock;
 };
 
 class Config {
 public:
     typedef std::map<std::string, ConfigVarBase::ptr> ConfigVarMap;
-    
+    typedef Mutex_RW MutexType;
     // Create a ConfigVar if m_data is empty
     template <class T> // Only "typename" make the name to be a class
     static typename ConfigVar<T>::ptr Lookup(const std::string& name,
             const T& default_value, const std::string& description = "") {
+        MutexType::WriteLock lock(GetMutex());
         auto it = GetData().find(name);
         if (it != GetData().end()) {
             // exist
@@ -360,6 +381,7 @@ public:
     template <class T>
     static typename ConfigVar<T>::ptr find (const std::string& name) {
         // return corresponding pointer by name
+        MutexType::ReadLock lock(GetMutex());
         auto it = GetData().find(name);
         if (it == GetData().end()) {
             SYLAR_LOG_INFO(SYLAR_LOG_ROOT()) << name << " does not exist.";
@@ -369,13 +391,17 @@ public:
     }
 
     static void LoadFromYaml(const YAML::Node& root);
-
     static ConfigVarBase::ptr LookupBase(const std::string& name);
+    static void Visit(std::function<void(ConfigVarBase::ptr)> callback);
 private:
     // for initialization
     static ConfigVarMap& GetData() {
         static ConfigVarMap s_data;
         return s_data;
+    }
+    static MutexType& GetMutex() {
+        static MutexType s_lock;
+        return s_lock;
     }
 };
 

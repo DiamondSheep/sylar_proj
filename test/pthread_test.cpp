@@ -1,6 +1,7 @@
 #include "threads.hpp"
 #include "utils.hpp"
 #include "log.hpp"
+#include "config.hpp"
 #include <time.h>
 
 sylar::Logger::ptr g_logger = SYLAR_LOG_ROOT();
@@ -44,6 +45,9 @@ void fun3() {
 
 int main (int argc, char* argv[]) {
     SYLAR_LOG_INFO(g_logger) << "thread test begin";
+    YAML::Node root = YAML::LoadFile("../conf/test.yml");
+    sylar::Config::LoadFromYaml(root);
+
     g_logger->clearAppender();
     g_logger->addAppender(sylar::LogAppender::ptr(new sylar::FileLogAppender("../data/log.txt")));
     clock_t start, end;
@@ -63,6 +67,13 @@ int main (int argc, char* argv[]) {
     SYLAR_LOG_INFO(g_logger) << "cout: " << count;
     g_logger->clearAppender();
     g_logger->addAppender(sylar::LogAppender::ptr(new sylar::StdoutLogAppender()));
+    
+    sylar::Config::Visit([](sylar::ConfigVarBase::ptr var){
+        SYLAR_LOG_INFO(g_logger) << "name=" << var->getName()
+                                 << " descripton=" << var->getDescription()
+                                 << " typename=" << var->getTypeName()
+                                 << " value=\n" << var->toString();
+    });
     SYLAR_LOG_INFO(g_logger) << "thread test end";
     SYLAR_LOG_INFO(g_logger) << "running time: " << double(end-start)/CLOCKS_PER_SEC <<"s";
     return 0;

@@ -5,6 +5,7 @@ namespace sylar {
 ConfigVarBase::ptr Config::LookupBase(const std::string& name){
     // find if name is in s_data
     // return ptr if it exists, or else nullptr
+    MutexType::ReadLock lock(GetMutex());
     auto it = GetData().find(name);
     return it == GetData().end() ? nullptr : it->second;
 }
@@ -71,6 +72,17 @@ void Config::LoadFromYaml(const YAML::Node& root) {
             }
         }
     }
+}
+
+
+void Config::Visit(std::function<void(ConfigVarBase::ptr)> callback) {
+    MutexType::ReadLock lock(GetMutex());
+    ConfigVarMap& m = GetData();
+    // for customized operations on data
+    for (auto it = m.begin();
+         it != m.end(); ++it) {
+            callback(it->second);
+         }
 }
 
 }
