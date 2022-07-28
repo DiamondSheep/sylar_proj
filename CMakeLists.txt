@@ -30,7 +30,8 @@ target_link_libraries(sylar PUBLIC Threads::Threads)
 set(TEST_SRC
     #test/logger_test.cpp # for logger 
     #test/config_test.cpp # for config
-    test/pthread_test.cpp # for thread
+    #test/pthread_test.cpp # for thread
+    test/utils_test.cpp # for utils
     )
 
 add_executable(test ${TEST_SRC}) 
